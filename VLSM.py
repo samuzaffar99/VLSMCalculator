@@ -37,8 +37,9 @@ def CalcSub():
     # Clear Output Frame
     for widget in OutFrame.winfo_children():
         widget.destroy()
-    getVLSM(n)
+    Data = getVLSM(n)
     # Column Headers
+    ColNames = ["#","Company","Hosts Needed","Hosts Available","Unused Hosts","Network Address","Slash","Mask","Usable Range","Broadcast","Wildcard"]
     Label(OutFrame, text='#').grid(row=0,column=0)
     Label(OutFrame, text='Company').grid(row=0,column=1)
     Label(OutFrame, text='Hosts Needed').grid(row=0,column=2)
@@ -62,15 +63,8 @@ def CalcSub():
     # Add outpput fields for each company
     for i in range(n):
         Label(OutFrame, text=i+1).grid(row=1+i,column=0)
-        Label(OutFrame, text=ListCompany[i][0].get()).grid(row=1+i,column=1)
-        Label(OutFrame, text=ListCompany[i][1].get()).grid(row=1+i,column=2)
-        # Label(OutFrame, text=ListCompany[i][1].get()).grid(row=1+i,column=2)
-        # Label(OutFrame, text=ListCompany[i][1].get()).grid(row=1+i,column=2)
-        # Label(OutFrame, text=ListCompany[i][1].get()).grid(row=1+i,column=2)
-        # Label(OutFrame, text=ListCompany[i][1].get()).grid(row=1+i,column=2)
-        # Label(OutFrame, text=ListCompany[i][1].get()).grid(row=1+i,column=2)
-        # Label(OutFrame, text=ListCompany[i][1].get()).grid(row=1+i,column=2)
-        # Label(OutFrame, text=ListCompany[i][1].get()).grid(row=1+i,column=2)
+        for j in range(len(Data[i])):
+            Label(OutFrame, text=Data[i][j]).grid(row=1+i,column=1+j)
     return
 def getVLSM(n):
     NetAdd,Prefix = getNetwork()
@@ -78,13 +72,37 @@ def getVLSM(n):
     if(not isValidIP(NetAdd)):
         return
     SubnetData = []
+    NetData = [0,0,0,0]
+    for i in range(int(Prefix/8)):
+        NetData[i]=NetAdd[i]
+    print(NetData)
     for i in range(n):
         Company = ListCompany[i][0].get()
-        NeededHosts = ListCompany[i][1].get()
+        NeededHosts = int(ListCompany[i][1].get())
         HostBits = ceil(log2(NeededHosts))
         AvailHosts= 2**HostBits
-        WastedHosts = NeededHosts-AvailHosts
-        SubnetData.append[Company,NeededHosts,AvailHosts,WastedHosts]
+        WastedHosts = AvailHosts-NeededHosts
+        IPStart = NetData[3]
+        IPEnd = NetData[3]+AvailHosts-1
+        Slash = 32-HostBits
+        Mask = 0
+        Network = ".".join(map(str, NetData))
+        AvailStart = IPStart+1
+        AvailStartStr = '.'.join(map(str,NetData[:3]+[AvailStart]))
+        AvailEnd = IPEnd-1
+        AvailEndStr = '.'.join(map(str,NetData[:3]+[AvailEnd]))
+        Range = AvailStartStr + " - " + AvailEndStr
+        BroadCast = IPEnd
+        BroadCastStr = '.'.join(map(str,NetData[:3]+[BroadCast]))
+        WildCard = IPEnd
+        WildCardStr = '.'.join(map(str,NetData[:3]+[WildCard]))
+        NetData[3] += AvailHosts
+        if(NetData[3]>255):
+            print("No more subnets can be made")
+        SubnetData.append([Company,NeededHosts,AvailHosts,WastedHosts,Network,Slash,Mask,Range,BroadCastStr,WildCardStr])
+    print("Total Hosts Required: ",(sum(row[2]) for row in zip(*SubnetData)))
+    print(SubnetData)
+    return SubnetData
 
 def getNetwork():
     NetStr = NetIP.get()
@@ -121,7 +139,9 @@ def getClass(IP):
 def isValidIP(IP):
     try:
         if(len(IP) == 4):
-            return
+            return True
+        else:
+            return False
     except:
         return
 
