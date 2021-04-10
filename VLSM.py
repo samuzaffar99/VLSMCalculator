@@ -1,6 +1,8 @@
 from tkinter import *
 from tkinter import messagebox
-from math import log2,ceil
+from math import log2,ceil, modf
+import pandas as pd
+import numpy as np
     # ConnectButton.configure(text = "Connect", command=Connect)
     # sendButton.configure(state="disabled")
     # uname.configure(state="normal")
@@ -38,8 +40,11 @@ def CalcSub():
     for widget in OutFrame.winfo_children():
         widget.destroy()
     Data = getVLSM(n)
+    # for i in range(len(Data.columns)):
+    #     Label(OutFrame, text=Data.columns[i]).grid(row=0,column=i)
     # Column Headers
-    ColNames = ["#","Company","Hosts Needed","Hosts Available","Unused Hosts","Network Address","Slash","Mask","Usable Range","Broadcast","Wildcard"]
+    # ColNames = Data.columns
+    # ColNames = ["#","Company","Hosts Needed","Hosts Available","Unused Hosts","Network Address","Slash","Mask","Usable Range","Broadcast","Wildcard"]
     Label(OutFrame, text='#').grid(row=0,column=0)
     Label(OutFrame, text='Company').grid(row=0,column=1)
     Label(OutFrame, text='Hosts Needed').grid(row=0,column=2)
@@ -60,7 +65,7 @@ def CalcSub():
     # Usable Range
     # Broadcast
     # Wildcard
-    # Add outpput fields for each company
+    # Add output fields for each company
     for i in range(n):
         Label(OutFrame, text=i+1).grid(row=1+i,column=0)
         for j in range(len(Data[i])):
@@ -68,12 +73,23 @@ def CalcSub():
     return
 def getVLSM(n):
     NetAdd,Prefix = getNetwork()
+    # ColNames = ["#","Company","Hosts Needed","Hosts Available","Unused Hosts","Network Address","Slash","Mask","Usable Range","Broadcast","Wildcard"]
+    # SubnetDataF = pd.DataFrame(columns = ColNames)
+    # for i in range(n):
+    #     SubnetDataF["Company"][i] = ListCompany[i][0].get()
+    #     SubnetDataF["Hosts Needed"][i] = int(ListCompany[i][1].get())
+    #     HostBits = ceil(log2(SubnetDataF["Hosts Needed"][i]))
+    #     SubnetDataF["Hosts Available"][i] = 2**HostBits
+    #     SubnetDataF["WastedHosts"][i] = SubnetDataF["Hosts Available"][i]-SubnetDataF["Hosts Needed"][i]
+    SubnetData = []
     getClass(NetAdd)
     if(not isValidIP(NetAdd)):
         return
     SubnetData = []
-    NetData = [0,0,0,0]
-    for i in range(int(Prefix/8)):
+    NetData = [0]*4
+    MaskData = [0]*4
+    Octet = int(Prefix/8)
+    for i in range(Octet):
         NetData[i]=NetAdd[i]
     print(NetData)
     for i in range(n):
@@ -85,7 +101,10 @@ def getVLSM(n):
         IPStart = NetData[3]
         IPEnd = NetData[3]+AvailHosts-1
         Slash = 32-HostBits
-        Mask = 0
+        for j in range(Octet):
+            MaskData[j]=255
+        MaskData[Octet]=sum((2**x) for x in range(8-((32-HostBits)%8), 8))
+        Mask = '.'.join(map(str,MaskData))
         Network = ".".join(map(str, NetData))
         AvailStart = IPStart+1
         AvailStartStr = '.'.join(map(str,NetData[:3]+[AvailStart]))
@@ -95,12 +114,14 @@ def getVLSM(n):
         BroadCast = IPEnd
         BroadCastStr = '.'.join(map(str,NetData[:3]+[BroadCast]))
         WildCard = IPEnd
-        WildCardStr = '.'.join(map(str,NetData[:3]+[WildCard]))
+        WildCardStr = '.'.join(map(str,[0]*Octet+[WildCard]))
         NetData[3] += AvailHosts
         if(NetData[3]>255):
             print("No more subnets can be made")
         SubnetData.append([Company,NeededHosts,AvailHosts,WastedHosts,Network,Slash,Mask,Range,BroadCastStr,WildCardStr])
-    print("Total Hosts Required: ",(sum(row[2]) for row in zip(*SubnetData)))
+    TotalHosts = sum(row[2] for row in SubnetData)
+    print("Total Hosts Required: ",TotalHosts)
+    print("Total Hosts Available: ",2**(32-Prefix))
     print(SubnetData)
     return SubnetData
 
