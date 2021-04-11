@@ -96,8 +96,10 @@ def getVLSM(n):
         Company = ListCompany[i][0].get()
         NeededHosts = int(ListCompany[i][1].get())
         HostBits = ceil(log2(NeededHosts))
-        AvailHosts= 2**HostBits-2 # *(4-Octet)
-        WastedHosts = AvailHosts-NeededHosts
+        UnavailCount = 2 # *(4-Octet)
+        AvailHosts= 2**HostBits
+        ValidHosts = AvailHosts - UnavailCount 
+        WastedHosts = ValidHosts-NeededHosts
         IPStart = NetData[3]
         IPEnd = NetData[3]+AvailHosts-1
         Slash = 32-HostBits
@@ -113,12 +115,12 @@ def getVLSM(n):
         Range = AvailStartStr + " - " + AvailEndStr
         BroadCast = IPEnd
         BroadCastStr = '.'.join(map(str,NetData[:3]+[BroadCast]))
-        WildCard = IPEnd
+        WildCard = AvailHosts-1
         WildCardStr = '.'.join(map(str,[0]*Octet+[WildCard]))
         NetData[3] += AvailHosts
         if(NetData[3]>255):
             print("No more subnets can be made")
-        SubnetData.append([Company,NeededHosts,AvailHosts,WastedHosts,Network,Slash,Mask,Range,BroadCastStr,WildCardStr])
+        SubnetData.append([Company,NeededHosts,ValidHosts,WastedHosts,Network,Slash,Mask,Range,BroadCastStr,WildCardStr])
     TotalHosts = sum(row[2] for row in SubnetData)
     print("Total Hosts Required: ",TotalHosts)
     print("Total Hosts Available: ",2**(32-Prefix))
