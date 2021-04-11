@@ -96,14 +96,14 @@ def getVLSM(n):
         Company = ListCompany[i][0].get()
         NeededHosts = int(ListCompany[i][1].get())
         HostBits = ceil(log2(NeededHosts))
-        AvailHosts= 2**HostBits
+        AvailHosts= 2**HostBits-2 # *(4-Octet)
         WastedHosts = AvailHosts-NeededHosts
         IPStart = NetData[3]
         IPEnd = NetData[3]+AvailHosts-1
         Slash = 32-HostBits
         for j in range(Octet):
             MaskData[j]=255
-        MaskData[Octet]=sum((2**x) for x in range(8-((32-HostBits)%8), 8))
+        MaskData[Octet]=sum((2**x) for x in range(8-(Slash%8), 8))
         Mask = '.'.join(map(str,MaskData))
         Network = ".".join(map(str, NetData))
         AvailStart = IPStart+1
