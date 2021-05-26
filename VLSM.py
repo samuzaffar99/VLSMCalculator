@@ -1,8 +1,9 @@
 from tkinter import *
 from tkinter import messagebox
-from math import log2,ceil, modf
+from math import log2,ceil, modf,floor
 import pandas as pd
 import numpy as np
+import ipaddress
     # ConnectButton.configure(text = "Connect", command=Connect)
     # sendButton.configure(state="disabled")
     # uname.configure(state="normal")
@@ -56,76 +57,162 @@ def CalcSub():
     Label(OutFrame, text='Usable Range').grid(row=0,column=8)
     Label(OutFrame, text='Broadcast').grid(row=0,column=9)
     Label(OutFrame, text='Wildcard').grid(row=0,column=10)
-    # Hosts Needed
-    # Hosts Available
-    # Unused Hosts
-    # Network Address
-    # Slash
-    # Mask
-    # Usable Range
-    # Broadcast
-    # Wildcard
-    # Add output fields for each company
     for i in range(n):
         Label(OutFrame, text=i+1).grid(row=1+i,column=0)
-        for j in range(len(Data[i])):
+        for j in range(len(Data.columns)):
             Label(OutFrame, text=Data[i][j]).grid(row=1+i,column=1+j)
     return
+
 def getVLSM(n):
     NetAdd,Prefix = getNetwork()
-    # ColNames = ["#","Company","Hosts Needed","Hosts Available","Unused Hosts","Network Address","Slash","Mask","Usable Range","Broadcast","Wildcard"]
-    # SubnetDataF = pd.DataFrame(columns = ColNames)
+    assert isValidIP(NetAdd)
+    ColNames = ["Company","Total Addresses","Hosts Needed","Hosts Available","Unused Hosts","Network Address","Slash","Subnet Mask","Usable Range","Broadcast","Wildcard"]
+    SubnetDF = pd.DataFrame(columns = ColNames,index=range(n))
+    ReservedCount = 2
+    for i in range(n):
+        SubnetDF["Company"][i] = ListCompany[i][0].get()
+        SubnetDF["Hosts Needed"][i] = int(ListCompany[i][1].get())
+        HostBits = ceil(log2(SubnetDF["Hosts Needed"][i]))
+        SubnetDF["Total Addresses"][i] = 2**HostBits
+        SubnetDF["Hosts Available"][i] = SubnetDF["Total Addresses"][i] - ReservedCount
+        SubnetDF["Unused Hosts"][i] = SubnetDF["Total Addresses"][i]-SubnetDF["Hosts Needed"][i]
+        SubnetDF["Slash"][i] = 32-HostBits
+    print(SubnetDF.head())
+    TotalHosts = sum(SubnetDF["Total Addresses"])
+
+    # ListNeededHosts = []
     # for i in range(n):
-    #     SubnetDataF["Company"][i] = ListCompany[i][0].get()
-    #     SubnetDataF["Hosts Needed"][i] = int(ListCompany[i][1].get())
-    #     HostBits = ceil(log2(SubnetDataF["Hosts Needed"][i]))
-    #     SubnetDataF["Hosts Available"][i] = 2**HostBits
-    #     SubnetDataF["WastedHosts"][i] = SubnetDataF["Hosts Available"][i]-SubnetDataF["Hosts Needed"][i]
-    SubnetData = []
-    getClass(NetAdd)
-    if(not isValidIP(NetAdd)):
-        return
-    SubnetData = []
+    #     ListNeededHosts.append(ListCompany[i][1].get())
+    #     TotalHosts += 2**ceil(log2(hosts[i]+2))
+    print("Total Hosts Required: ",TotalHosts)
+    print("Total Hosts Available: ",2**(32-Prefix))
+
+    MaxPrefix = 32-ceil(log2(TotalHosts))
+    print("Max Prefix Allowed: ",MaxPrefix)
+    if(Prefix>MaxPrefix):
+        print(f"Using Prefix /{MaxPrefix} instead")
+        Prefix = MaxPrefix
+
     NetData = [0]*4
-    MaskData = [0]*4
     Octet = int(Prefix/8)
     for i in range(Octet):
         NetData[i]=NetAdd[i]
     print(NetData)
+    ipAddress = ipaddress.ip_address('.'.join(map(str,NetData)))
+    print("Network: ", ipAddress)
     for i in range(n):
-        Company = ListCompany[i][0].get()
-        NeededHosts = int(ListCompany[i][1].get())
-        HostBits = ceil(log2(NeededHosts))
-        UnavailCount = 2 # *(4-Octet)
-        AvailHosts= 2**HostBits
-        ValidHosts = AvailHosts - UnavailCount 
-        WastedHosts = ValidHosts-NeededHosts
-        IPStart = NetData[3]
-        IPEnd = NetData[3]+AvailHosts-1
-        Slash = 32-HostBits
-        for j in range(Octet):
-            MaskData[j]=255
-        MaskData[Octet]=sum((2**x) for x in range(8-(Slash%8), 8))
-        Mask = '.'.join(map(str,MaskData))
-        Network = ".".join(map(str, NetData))
-        AvailStart = IPStart+1
-        AvailStartStr = '.'.join(map(str,NetData[:3]+[AvailStart]))
-        AvailEnd = IPEnd-1
-        AvailEndStr = '.'.join(map(str,NetData[:3]+[AvailEnd]))
-        Range = AvailStartStr + " - " + AvailEndStr
-        BroadCast = IPEnd
-        BroadCastStr = '.'.join(map(str,NetData[:3]+[BroadCast]))
-        WildCard = AvailHosts-1
-        WildCardStr = '.'.join(map(str,[0]*Octet+[WildCard]))
-        NetData[3] += AvailHosts
-        if(NetData[3]>255):
-            print("No more subnets can be made")
-        SubnetData.append([Company,NeededHosts,ValidHosts,WastedHosts,Network,Slash,Mask,Range,BroadCastStr,WildCardStr])
-    TotalHosts = sum(row[2] for row in SubnetData)
-    print("Total Hosts Required: ",TotalHosts)
-    print("Total Hosts Available: ",2**(32-Prefix))
-    print(SubnetData)
-    return SubnetData
+        # NeededHosts = ListNeededHosts[i]
+        # HostBits = ceil(log2(NeededHosts+2))
+        # Slash = 32-HostBits
+        # # print("Needed Hosts: ",NeededHosts)
+        # # print("Host Bits: ",HostBits)
+        # print("Slash: ", Slash)
+        # ReservedCount = 2 # *(4-Octet)
+        # nAddresses= 2**HostBits
+        # # print("Available Addresses: ", nAddresses)
+        # ValidHosts = nAddresses - ReservedCount
+        # print("Available Hosts: ", ValidHosts)
+        # WastedHosts = nAddresses - NeededHosts - ReservedCount
+        # print("Wasted Hosts: ", WastedHosts)
+        subnet = ipaddress.IPv4Network(str(ipAddress)+f"/{SubnetDF.Slash[i]}", False)
+
+        SubnetDF["Network Address"][i] = subnet.network_address
+        print("Network Address: ", subnet.network_address)
+
+        SubnetDF["Subnet Mask"][i] = subnet.netmask
+        print("Subnet Mask: ", subnet.netmask)
+
+        SubnetDF["Broadcast"][i] = subnet.broadcast_address
+        print("Broadcast Address: ", subnet.broadcast_address)
+
+        SubnetDF["Wildcard"][i] = subnet.hostmask
+        print("Wildcard Address: ", subnet.hostmask)
+        
+        hostList = list(subnet.hosts())
+        SubnetDF["Usable Range"][i]= f"{(hostList[0])} - {hostList[-1]}"
+        print("Starting IP Address: ", hostList[0])
+        print("Ending IP Address: ", hostList[-1])
+
+        ipAddress += SubnetDF["Total Addresses"][i]
+        print()
+    print(SubnetDF.head())
+    return SubnetDF
+    # NetAdd,Prefix = getNetwork()
+    # # ColNames = ["#","Company","Hosts Needed","Hosts Available","Unused Hosts","Network Address","Slash","Mask","Usable Range","Broadcast","Wildcard"]
+    # # SubnetDataF = pd.DataFrame(columns = ColNames)
+    # # for i in range(n):
+    # #     SubnetDataF["Company"][i] = ListCompany[i][0].get()
+    # #     SubnetDataF["Hosts Needed"][i] = int(ListCompany[i][1].get())
+    # #     HostBits = ceil(log2(SubnetDataF["Hosts Needed"][i]))
+    # #     SubnetDataF["Hosts Available"][i] = 2**HostBits
+    # #     SubnetDataF["WastedHosts"][i] = SubnetDataF["Hosts Available"][i]-SubnetDataF["Hosts Needed"][i]
+    # getClass(NetAdd)
+    # if(not isValidIP(NetAdd)):
+    #     return
+    # SubnetData = []
+    # NetData = [0]*4
+    # MaskData = [0]*4
+    # Octet = int(Prefix/8)
+
+    # for i in range(Octet):
+    #     NetData[i]=NetAdd[i]
+    # print(NetData)
+
+    # for i in range(n):
+    #     Company = ListCompany[i][0].get()
+
+    #     NeededHosts = int(ListCompany[i][1].get())
+    #     HostBits = ceil(log2(NeededHosts))
+    #     Slash = 32-HostBits
+
+    #     UnavailCount = 2 # *(4-Octet)
+    #     AvailHosts= 2**HostBits
+    #     ValidHosts = AvailHosts - UnavailCount
+    #     WastedHosts = ValidHosts - NeededHosts
+
+    #     IPStart = NetData
+    #     # IPEnd = NetData[3]+AvailHosts-1
+        
+    #     NetMask = [255]*4
+    #     NetMask[floor(log2(Slash/8))] = 
+    #     for j in range(Octet):
+    #         MaskData[j]=255
+        
+    #     MaskData[Octet]=sum((2**x) for x in range(8-(Slash%8), 8))
+    #     Mask = '.'.join(map(str,MaskData))
+    #     Network = ".".join(map(str, NetData))
+    #     AvailStart = IPStart+1
+    #     AvailStartStr = '.'.join(map(str,NetData[:3]+[AvailStart]))
+    #     AvailEnd = IPEnd-1
+    #     AvailEndStr = '.'.join(map(str,NetData[:3]+[AvailEnd]))
+    #     Range = AvailStartStr + " - " + AvailEndStr
+    #     BroadCast = IPEnd
+    #     BroadCastStr = '.'.join(map(str,NetData[:3]+[BroadCast]))
+    #     WildCard = AvailHosts-1
+    #     WildCardStr = '.'.join(map(str,[0]*Octet+[WildCard]))
+    #     NetData[3] += AvailHosts
+    #     if(NetData[3]>255):
+    #         print("No more subnets can be made")
+    #     SubnetData.append([Company,NeededHosts,ValidHosts,WastedHosts,Network,Slash,Mask,Range,BroadCastStr,WildCardStr])
+    # TotalHosts = sum(row[2] for row in SubnetData)
+    # print("Total Hosts Required: ",TotalHosts)
+    # print("Total Hosts Available: ",2**(32-Prefix))
+    # print(SubnetData)
+    
+
+def ipv6():
+    NetStr = NetIP.get()
+    NetSplit= NetStr.split("/")
+    print(NetSplit)
+    if(len(NetSplit)!=2):
+        print("Invalid Network Address")
+        return
+    IPStr = NetSplit[0].split(":")
+    IP = list(map(int,IPStr))
+    
+    Prefix = int(NetSplit[1])
+    print(IP,Prefix)
+    return IP, Prefix
 
 def getNetwork():
     NetStr = NetIP.get()
@@ -136,6 +223,7 @@ def getNetwork():
         return
     IPStr = NetSplit[0].split(".")
     IP = list(map(int,IPStr))
+    
     Prefix = int(NetSplit[1])
     print(IP,Prefix)
     return IP, Prefix
