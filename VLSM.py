@@ -53,7 +53,10 @@ def CalcSub():
     return
 
 def getVLSMv4(n):
-    NetAdd,Prefix = getNetworkv4()
+    try:
+        NetAdd,Prefix = getNetworkv4()
+    except:
+        print("Invalid Network Address")
     assert isValidIPv4(NetAdd)
     ColNames = ["Company","Total Addresses","Hosts Needed","Hosts Available","Unused Hosts","Network Address","Slash","Subnet Mask","Usable Range","Broadcast","Wildcard"]
     SubnetDF = pd.DataFrame(columns = ColNames,index=range(n))
@@ -83,7 +86,10 @@ def getVLSMv4(n):
     for i in range(Octet):
         NetData[i]=NetAdd[i]
     print(NetData)
-    ipAddress = ipaddress.ip_address('.'.join(map(str,NetData)))
+    try:
+        ipAddress = ipaddress.ip_address('.'.join(map(str,NetData)))
+    except:
+        print("Invalid IPv4 Address")
     print("Network: ", ipAddress)
     for i in range(n):
         subnet = ipaddress.IPv4Network(str(ipAddress)+f"/{SubnetDF.Slash[i]}", False)
@@ -109,32 +115,17 @@ def getVLSMv4(n):
         print()
     print(SubnetDF.head())
     return SubnetDF
-    
-
-def ipv6():
-    NetStr = NetIP.get()
-    NetSplit= NetStr.split("/")
-    print(NetSplit)
-    if(len(NetSplit)!=2):
-        print("Invalid Network Address")
-        return
-    IPStr = NetSplit[0].split(":")
-    IP = list(map(int,IPStr))
-    
-    Prefix = int(NetSplit[1])
-    print(IP,Prefix)
-    return IP, Prefix
 
 def getNetworkv4():
     NetStr = NetIP.get()
     NetSplit= NetStr.split("/")
     print(NetSplit)
-    if(len(NetSplit)!=2):
-        print("Invalid Network Address")
-        return
     IPStr = NetSplit[0].split(".")
     IP = list(map(int,IPStr))
-    
+    if(len(NetSplit)!=2):
+        print("No Prefix Provided")
+        print("Using Auto Prefix (32)")
+        return IP,32
     Prefix = int(NetSplit[1])
     print(IP,Prefix)
     return IP, Prefix
