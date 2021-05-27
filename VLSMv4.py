@@ -1,12 +1,8 @@
 from tkinter import *
 from tkinter import messagebox
-from math import log2,ceil, modf,floor
+from math import log2,ceil
 import pandas as pd
-import numpy as np
 import ipaddress
-    # ConnectButton.configure(text = "Connect", command=Connect)
-    # sendButton.configure(state="disabled")
-    # uname.configure(state="normal")
 
 ListCompany=[]
 def UpdateEntry():
@@ -63,7 +59,11 @@ def getVLSMv4(n):
     ReservedCount = 2
     for i in range(n):
         SubnetDF["Company"][i] = ListCompany[i][0].get()
-        SubnetDF["Hosts Needed"][i] = int(ListCompany[i][1].get())
+        try:
+            SubnetDF["Hosts Needed"][i] = int(ListCompany[i][1].get())
+        except:
+            print("Invalid Number of Hosts entered, using value 30 instead")
+            SubnetDF["Hosts Needed"][i] = 30
         HostBits = ceil(log2(SubnetDF["Hosts Needed"][i]+2))
         SubnetDF["Total Addresses"][i] = 2**HostBits
         SubnetDF["Hosts Available"][i] = SubnetDF["Total Addresses"][i] - ReservedCount
@@ -177,7 +177,7 @@ def on_closing():
         mainWindow.destroy()
 # GUI
 mainWindow = Tk()
-mainWindow.title('VLSM Calculator (ipv4)')
+mainWindow.title('VLSM Calculator (IPv4)')
 
 configFrame = Frame(mainWindow)
 # Input Network IP and Number of Hosts

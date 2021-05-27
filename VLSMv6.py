@@ -99,7 +99,7 @@ def on_closing():
         mainWindow.destroy()
 # GUI
 mainWindow = Tk()
-mainWindow.title('VLSM Calculator (ipv6)')
+mainWindow.title('VLSM Calculator (IPv6)')
 
 configFrame = Frame(mainWindow)
 # Input Network IP and Number of Hosts
